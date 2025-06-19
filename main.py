@@ -36,6 +36,7 @@ def main():
     messages = [
         types.Content(role="user", parts=[types.Part(text=user_prompt)]),
     ]
+
     if ("-v" in sys.argv[1:]) or ("--verbose" in sys.argv[1:]):
         generate_content_verbose(
                                  client,
@@ -69,6 +70,74 @@ def generate_content_verbose(client, messages):
     if response.function_calls != []:
         print(f"Calling function: {response.function_calls[0].name}({response.function_calls[0].args})")
     print(f"Response:\n {response.text}\nUser prompt: {" ".join(sys.argv[1:])} Prompt tokens: {response.usage_metadata.prompt_token_count}\nResponse tokens: {response.usage_metadata.candidates_token_count}")
+    
+schema_get_files_info = types.FunctionDeclaration(
+    name="get_files_info",
+    description="Lists files in the specified directory along with their sizes, constrained to the working directory.",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "directory": types.Schema(
+                type=types.Type.STRING,
+                description="The directory to list files from, relative to the working directory. If not provided, lists files in the working directory itself.",
+            ),
+        },
+    ),
+)
+
+schema_write_file = types.FunctionDeclaration(
+    name="write_file",
+    description="Writes content to a file in the specified directory, constrained to the working directory.",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "directory": types.Schema(
+                type=types.Type.STRING,
+                description="Writes content to a file in the specified directory, constrained to the working directory.",
+            ),
+            "content": types.Schema(
+                type=types.Type.STRING,
+                description="Text to be written to the file",
+            ),
+         },
+    ),
+    )
+
+schema_get_file_content = types.FunctionDeclaration(
+    name="get_file_content",
+    description="Reads the file in the specified directory and truncates the result if it is more than 10,000 characters, constrained to the working directory.",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "directory": types.Schema(
+                type=types.Type.STRING,
+                description="Reads the file in the specified directory and truncates the result if it is more than 10,000 characters, constrained to the working directory.",
+            ),
+        },
+    ),
+)
+schema_run_python_file = types.FunctionDeclaration(
+    name="run_python_file",
+    description="Execute the file at the specified directory with the specified arguments, constrained to the working directory",
+    parameters=types.Schema(
+        type=types.Type.OBJECT,
+        properties={
+            "directory": types.Schema(
+                type=types.Type.STRING,
+                description="Execute the file at the specified directory with the specified arguments, constrained to the working directory",
+            ),
+        },
+    ),
+)
+available_functions = types.Tool(
+    function_declarations=[
+        schema_get_files_info,
+        schema_get_file_content,
+        schema_run_python_file,
+        schema_write_file
+    ]
+)
+
 
 if __name__ == "__main__":
     main()
