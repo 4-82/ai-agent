@@ -2,7 +2,7 @@ import os
 import sys
 import subprocess
 
-def run_python_file(working_directory, file_path):
+def run_python_file(working_directory, file_path, args=None):
     directory_path = os.path.abspath(working_directory)
     file_info = os.path.join(working_directory, file_path)
 
@@ -15,27 +15,25 @@ def run_python_file(working_directory, file_path):
     elif not file_path.endswith(".py"):
         return f'Error: "{file_path}" is not a Python file.'
     try:
+        commands = [sys.executable, file_info]
+        if args:
+            commands.extend(args)
         result = subprocess.run(
-            [sys.executable, file_info],
+            commands,
             capture_output=True,
             text=True,
+            timeout=30,
             cwd=".",
-            timeout=30
-        )    
+        )
+        output = []
+        if result.stdout:
+            output.append(f"STDOUT:\n{result.stdout}")
+        if result.stderr:
+            output.append(f"STDERR:\n{result.stderr}")
+
+        if result.returncode != 0:
+            output.append(f"Process exited with code {result.returncode}")
+
+        return "\n".join(output) if output else "No output produced."
     except Exception as e:
-        return f"Error: executing Python file: {e}"
-
-    stdout = f'STDOUT: \n{result.stdout}\n'
-    stderr = f'STDERR: \n{result.stderr}\n'
-    process_info = f'Process exited with code {result.returncode}\n'  
-    output = f'{stdout} {stderr}'
-    
-    if result.returncode != 0:
-        output += process_info
-    if result.stdout == "" and result.stderr == "":
-        output += 'No output produced'
-
-    return output
-
-print(run_python_file("calculator", "main.py"))
- 
+        return f"Error: executing Python file: {e}" 
