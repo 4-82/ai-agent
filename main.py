@@ -37,15 +37,23 @@ def main():
         types.Content(role="user", parts=[types.Part(text=user_prompt)]),
     ]
     if ("-v" in sys.argv[1:]) or ("--verbose" in sys.argv[1:]):
-        generate_content_verbose(client, messages)
+        generate_content_verbose(
+                                 client,
+                                 messages,
+                         )
     else:
-        generate_content(client, messages)
+        generate_content(
+                         client,
+                         messages,
+                     )
     
 
 def generate_content(client, messages):
     response = client.models.generate_content(
         model="gemini-2.0-flash-001",
         contents=messages,
+        config=types.GenerateContentConfig(tools=[available_functions], system_instruction=system_prompt)
+
     )
     print(f"Response:\n {response.text}")
 
@@ -53,6 +61,7 @@ def generate_content_verbose(client, messages):
     response = client.models.generate_content(
         model="gemini-2.0-flash-001",
         contents=messages,
+        config=types.GenerateContentConfig(tools=[available_functions], system_instruction=system_prompt)
     )
     print(f"Response:\n {response.text}\nUser prompt: {" ".join(sys.argv[1:])} Prompt tokens: {response.usage_metadata.prompt_token_count}\nResponse tokens: {response.usage_metadata.candidates_token_count}")
 
