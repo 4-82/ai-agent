@@ -3,6 +3,11 @@ import sys
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+from functions.get_files_info import get_files_info
+from functions.get_file_content import get_file_content
+from functions.write_file import write_file
+from functions.run_python import run_python_file
+
 
 system_prompt = """
 You are a helpful AI coding agent.
@@ -60,15 +65,35 @@ def generate_content(client, messages):
         print(f"Calling function: {response.function_calls[0].name}({response.function_calls[0].args})")
     print(f"Response:\n {response.text}")
 
-def generate_content_verbose(client, messages):
+def generate_content(client, messages, verbose):
     response = client.models.generate_content(
         model="gemini-2.0-flash-001",
         contents=messages,
-        config=types.GenerateContentConfig(tools=[available_functions], system_instruction=system_prompt)
+        config=types.GenerateContentConfig(
+            tools=[available_functions], system_instruction=system_prompt
+        ),
     )
+    if verbose:
+        print("Prompt tokens:", response.usage_metadata.prompt_token_count)
+        print("Response tokens:", response.usage_metadata.candidates_token_count)
 
+    if not response.function_calls:
+        return response.text
+
+    for function_call_part in response.function_calls:
+        print(f"Calling function: {function_call_part.name}({function_call_part.args})")
+        result = call_function(function_call_part, function_call_part)
+        if not result.parts[0].function_response.response:
+            raise Exception("FATAL ERROR")
+        elif result.parts[0].function_response.response and verbose:
+            print(f"-> {result.parts[0].function_response.response}")
+        
     if response.function_calls != []:
-        print(f"Calling function: {response.function_calls[0].name}({response.function_calls[0].args})")
+        result = call_function(response.function_calls[0].name, response.function_calls[0].args)
+        if not result.parts[0].function_response.response:
+            raise Exception("FAILED")
+        else:
+            print(f"{result.parts[0].function_response.response}")
     print(f"Response:\n {response.text}\nUser prompt: {" ".join(sys.argv[1:])} Prompt tokens: {response.usage_metadata.prompt_token_count}\nResponse tokens: {response.usage_metadata.candidates_token_count}")
     
 schema_get_files_info = types.FunctionDeclaration(
