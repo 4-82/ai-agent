@@ -24,46 +24,44 @@ All paths you provide should be relative to the working directory. You do not ne
 
 def main():
     load_dotenv()
-    args = sys.argv[1:]
+
+    verbose = "--verbose" in sys.argv
+    args = [arg for arg in sys.argv[1:] if not arg.startswith("--")]
 
     if not args:
         print("AI Code Assistant")
-        print('\nUsage: python main.py "your prompt here"')
-        print('Example: python main.py "How do I build a calculator app?"')
+        print('\nUsage: python main.py "your prompt here" [--verbose]')
+        print('Example: python main.py "How do I fix the calculator?"')
         sys.exit(1)
-    user_prompt = " ".join(args)
 
     api_key = os.environ.get("GEMINI_API_KEY")
     client = genai.Client(api_key=api_key)
 
     user_prompt = " ".join(args)
 
+    if verbose:
+        print(f"User prompt: {user_prompt}\n")
+
     messages = [
         types.Content(role="user", parts=[types.Part(text=user_prompt)]),
     ]
 
-    if ("-v" in sys.argv[1:]) or ("--verbose" in sys.argv[1:]):
-        generate_content_verbose(
-                                 client,
-                                 messages,
-                         )
-    else:
-        generate_content(
-                         client,
-                         messages,
-                     )
-    
+    count  = 0
 
-def generate_content(client, messages):
-    response = client.models.generate_content(
-        model="gemini-2.0-flash-001",
-        contents=messages,
-        config=types.GenerateContentConfig(tools=[available_functions], system_instruction=system_prompt)
+    while True:
+        count += 1
+        if count > 20:
+            print("Maximum count (20) reached.")
+            sys.exit(1)
 
-    )
-    if response.function_calls != []:
-        print(f"Calling function: {response.function_calls[0].name}({response.function_calls[0].args})")
-    print(f"Response:\n {response.text}")
+        try:
+            response  = generate_content(client, messages, verbose)
+            if response:
+                print("Final response:")
+                print(response)
+                break
+        except Exception as e:
+            print(f"Error in generate_content: {e}")
 
 def generate_content(client, messages, verbose):
     response = client.models.generate_content(
@@ -79,23 +77,22 @@ def generate_content(client, messages, verbose):
 
     if not response.function_calls:
         return response.text
-
+  
+    function_responses = []
     for function_call_part in response.function_calls:
-        print(f"Calling function: {function_call_part.name}({function_call_part.args})")
-        result = call_function(function_call_part, function_call_part)
-        if not result.parts[0].function_response.response:
-            raise Exception("FATAL ERROR")
-        elif result.parts[0].function_response.response and verbose:
-            print(f"-> {result.parts[0].function_response.response}")
-        
-    if response.function_calls != []:
-        result = call_function(response.function_calls[0].name, response.function_calls[0].args)
-        if not result.parts[0].function_response.response:
-            raise Exception("FAILED")
-        else:
-            print(f"{result.parts[0].function_response.response}")
-    print(f"Response:\n {response.text}\nUser prompt: {" ".join(sys.argv[1:])} Prompt tokens: {response.usage_metadata.prompt_token_count}\nResponse tokens: {response.usage_metadata.candidates_token_count}")
-    
+        function_call_result = call_function(function_call_part, verbose)
+        if (
+            not function_call_result.parts
+            or not function_call_result.parts[0].function_response
+        ):
+            raise Exception("empty function call result")
+        if verbose:
+            print(f"-> {function_call_result.parts[0].function_response.response}")
+        function_responses.append(function_call_result.parts[0])
+
+    if not function_responses:
+        raise Exception("no function responses generated, exiting.")
+
 schema_get_files_info = types.FunctionDeclaration(
     name="get_files_info",
     description="Lists files in the specified directory along with their sizes, constrained to the working directory.",
