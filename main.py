@@ -178,7 +178,38 @@ available_functions = types.Tool(
     ]
 )
 
+def call_function(function_call_part, verbose=False):
+    if (verbose):
+        print(f"Calling function: {function_call_part.name}({function_call_part.args})")
+    else:
+        print(f" - Calling function: {function_call_part.name}")
+    functions = { "get_file_content": get_file_content, "get_files_info": get_files_info, "write_file": write_file,  "run_python_file": run_python_file, }
+    args = ({"working_directory": "./calculator" } | function_call_part.args)
 
+    if function_call_part.name not in functions:
+        return types.Content(
+            role="tool",
+            parts=[
+                types.Part.from_function_response(
+                    name=function_call_part.name,
+                    response={"error": f"Unknown function: {function_call_part.name}"},
+                )
+            ],
+        )
+
+    result = functions[function_call_part.name](**args)
+
+    return types.Content(
+    role="tool",
+    parts=[
+        types.Part.from_function_response(
+            name=function_call_part.name,
+            response={"result": result},
+        )
+    ],
+)
+
+    
 if __name__ == "__main__":
     main()
 
