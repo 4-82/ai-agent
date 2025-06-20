@@ -110,50 +110,65 @@ schema_get_files_info = types.FunctionDeclaration(
     ),
 )
 
+
 schema_write_file = types.FunctionDeclaration(
     name="write_file",
-    description="Writes content to a file in the specified directory, constrained to the working directory.",
+    description="Writes content to a file within the working directory. Creates the file if it doesn't exist.",
     parameters=types.Schema(
         type=types.Type.OBJECT,
         properties={
-            "directory": types.Schema(
+            "file_path": types.Schema(
                 type=types.Type.STRING,
-                description="Writes content to a file in the specified directory, constrained to the working directory.",
+                description="Path to the file to write, relative to the working directory.",
             ),
             "content": types.Schema(
                 type=types.Type.STRING,
-                description="Text to be written to the file",
+                description="Content to write to the file",
             ),
-         },
+        },
+        required=["file_path", "content"],
     ),
-    )
+)
+
 
 schema_get_file_content = types.FunctionDeclaration(
     name="get_file_content",
-    description="Reads the file in the specified directory and truncates the result if it is more than 10,000 characters, constrained to the working directory.",
+    description="Reads and returns the first 10,000 characters of the content from a specified file within the working directory.",
     parameters=types.Schema(
         type=types.Type.OBJECT,
         properties={
-            "directory": types.Schema(
+            "file_path": types.Schema(
                 type=types.Type.STRING,
-                description="Reads the file in the specified directory and truncates the result if it is more than 10,000 characters, constrained to the working directory.",
+                description="The path to the file whose content should be read, relative to the working directory.",
             ),
         },
+        required=["file_path"],
     ),
 )
+
 schema_run_python_file = types.FunctionDeclaration(
     name="run_python_file",
-    description="Execute the file at the specified directory with the specified arguments, constrained to the working directory",
+    description="Executes a Python file within the working directory and returns the output from the interpreter.",
     parameters=types.Schema(
         type=types.Type.OBJECT,
         properties={
-            "directory": types.Schema(
+            "file_path": types.Schema(
                 type=types.Type.STRING,
-                description="Execute the file at the specified directory with the specified arguments, constrained to the working directory",
+                description="Path to the Python file to execute, relative to the working directory.",
+            ),
+            "args": types.Schema(
+                type=types.Type.ARRAY,
+                items=types.Schema(
+                    type=types.Type.STRING,
+                    description="Optional arguments to pass to the Python file.",
+                ),
+                description="Optional arguments to pass to the Python file.",
             ),
         },
+        required=["file_path"],
     ),
 )
+
 available_functions = types.Tool(
     function_declarations=[
         schema_get_files_info,
